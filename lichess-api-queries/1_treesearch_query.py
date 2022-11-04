@@ -2,12 +2,13 @@ import subprocess
 import json
 import time
 import csv
+import traceback
 
 attacker = "white"
+prob_cutoff = 0.01
 trimmed_prob_cutoff = 0.10
 attacker_win_prob_cutoff = 0.45
 num_defending_first_moves_to_consider = 5
-num_defending_subsequent_moves_to_consider = 2
 min_num_games = 100
 output_filename = ""
 
@@ -39,9 +40,17 @@ stack = []
 initial_position = {'opening_name': 1, 'moves': "", 'move_index': 0, 'prob': 1, 'prob_trimmed': 1, 'white_wins':min_num_games, 'draws':min_num_games, 'black_wins':min_num_games, 'white_win_prob':1, 'draw_prob':1, 'black_win_prob':1}
 stack.append(initial_position)
 
+n_api_queries = 0
+
 while len(stack) > 0:
 	print("Stack size: " + str(len(stack)))
 	current_position = stack.pop()
+
+	#print("Current position: " + str(current_position))
+	if n_api_queries % 1000 == 0:
+		# Save stack to file in case there is a need to restart
+		with open("logs/" + str(n_api_queries) + "_stack.txt", "w") as myfile:
+			myfile.write(str(stack))
 
 	current_attacker_win_prob = float("NaN")
 	if attacker == "white":
@@ -51,7 +60,7 @@ while len(stack) > 0:
 
 	# Check for stop criteria before API query. If we are stopping here, write to file now, using a potentially out of date opening name.
 	# Otherwise, we will run the API query to potentially update the opening name then write to file.
-	if (current_position['prob_trimmed'] < trimmed_prob_cutoff) or (current_position['white_wins'] + current_position['draws'] + current_position['black_wins'] < min_num_games) or (current_attacker_win_prob < attacker_win_prob_cutoff):
+	if (current_position['prob_trimmed'] < trimmed_prob_cutoff) or (current_position['prob'] < prob_cutoff) or (current_position['white_wins'] + current_position['draws'] + current_position['black_wins'] < min_num_games) or (current_attacker_win_prob < attacker_win_prob_cutoff):
 		# Write line to file for this position, using the existing opening name
 		with open(output_filename, "a") as myfile:
 		    myfile.write(
@@ -69,24 +78,37 @@ while len(stack) > 0:
 		continue
 	
 	result = ""
+	attempt_number = 1
+	query_success = False
+	while (attempt_number < 5) & (query_success == False):
+		attempt_number = attempt_number + 1
+		try:
+			while query_success == False:
+				num_moves_to_consider = 10
+				if (current_position['move_index'] == 1) & (attacker == "white"):
+					num_moves_to_consider = 5
+				if (current_position['move_index'] == 0) & (attacker == "black"):
+					num_moves_to_consider = 5
 
-	while True:
-		num_moves_to_consider = 12
-		if (current_position['move_index'] == 2) & (attacker == "white"):
-			num_moves_to_consider = 5
-		if (current_position['move_index'] == 1) & (attacker == "black"):
-			num_moves_to_consider = 5
+				# curl -G --data-urlencode "play=e2e4,e7e5,g1f3,b8c6,f1c4,f8c5,e1h1,g8f6,d2d4" --data-urlencode "topGames=0" --data-urlencode "recentGames=0" --data-urlencode "moves=12" https://explorer.lichess.ovh/lichess
 
-		# curl -G --data-urlencode "play=e2e4,e7e5,g1f3,b8c6,f1c4,f8c5,e1h1,g8f6,d2d4" --data-urlencode "topGames=0" --data-urlencode "recentGames=0" --data-urlencode "moves=12" https://explorer.lichess.ovh/lichess
+				result = subprocess.run(['curl -G --data-urlencode "play=' + current_position['moves'] + '" --data-urlencode "topGames=0" --data-urlencode "recentGames=0" --data-urlencode "moves=' + str(num_moves_to_consider) + '" https://explorer.lichess.ovh/lichess'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+				if "429 Too Many Requests" in str(result.stdout):
+					print("Received 429 status - waiting 1 minute")
+					time.sleep(60)
+				else:
+					query_success = True
+			
+			json_data = json.loads(result.stdout)
+		except Exception as e:
+			with open('errors.txt', 'a') as f:
+				f.write("Caught an error on attempt " + str(attempt_number) + "\n")
+				f.write(str(current_position) + "\n")
+				f.write(str(e))
+				f.write(traceback.format_exc())
 
-		result = subprocess.run(['curl -G --data-urlencode "play=' + current_position['moves'] + '" --data-urlencode "topGames=0" --data-urlencode "recentGames=0" --data-urlencode "moves=' + str(num_moves_to_consider) + '" https://explorer.lichess.ovh/lichess'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-		if "429 Too Many Requests" in str(result.stdout):
-			print("Received 429 status - waiting 1 minute")
-			time.sleep(60)
-		else:
-			break
-	
-	json_data = json.loads(result.stdout)
+	n_api_queries = n_api_queries + 1
+	print("Number of API queries: " + str(n_api_queries))
 
 	white_win_prob = json_data['white'] / (json_data['white'] + json_data['draws'] + json_data['black'])
 	draw_prob = json_data['draws'] / (json_data['white'] + json_data['draws'] + json_data['black'])
