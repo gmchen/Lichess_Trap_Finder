@@ -8,37 +8,35 @@ attacker = "white"
 prob_cutoff = 0.01
 trimmed_prob_cutoff = 0.10
 attacker_win_prob_cutoff = 0.45
+num_attacking_moves_to_consider = 10
 num_defending_first_moves_to_consider = 5
-min_num_games = 100
+num_defending_subsequent_moves_to_consider = 2
+min_num_games = 500
+raw_json_output_filename = ""
 output_filename = ""
-
-opening_name_dict = {}
-
-# Get opening names from eco database
-with open("../external_data/eco_openings_processed/eco_openings_unique_names.tsv", "r", encoding="utf8") as fruits_file:
-	tsv_reader = csv.reader(fruits_file, delimiter="\t")
-
-	# Skip the first row, which is the header
-	next(tsv_reader)
-
-	for row in tsv_reader:
-		opening_name = row[0] + ": " + row[1]
-		moves = row[5]
-		opening_name_dict[moves] = opening_name
 
 if attacker == "white":
 	output_filename = "data_from_queries/position_data_white_attacking.txt"
 elif attacker == "black":
 	output_filename = "data_from_queries/position_data_black_attacking.txt"
 
+if attacker == "white":
+	raw_json_output_filename = "data_from_queries/raw_json_data_white_attacking.txt"
+elif attacker == "black":
+	raw_json_output_filename = "data_from_queries/raw_json_data_black_attacking.txt"
+
 with open(output_filename, "w") as myfile:
 	myfile.write("Opening\tUCI_moves\tmove_index\tprob\tprob_trimmed\twhite_wins\tdraws\tblack_wins\twhite_win_prob\tdraw_prob\tblack_win_prob\n")
 
 # Each node is a dict with four key-value pairs: the comma-separated UCI moves, the move index, the probability of this position, and the trimmed probability
+
 stack = []
 
 initial_position = {'opening_name': 1, 'moves': "", 'move_index': 0, 'prob': 1, 'prob_trimmed': 1, 'white_wins':min_num_games, 'draws':min_num_games, 'black_wins':min_num_games, 'white_win_prob':1, 'draw_prob':1, 'black_win_prob':1}
 stack.append(initial_position)
+
+# Restart run from intermediate logfile
+#stack = eval(open("logs/32000_stack.txt").read())
 
 n_api_queries = 0
 
@@ -84,11 +82,21 @@ while len(stack) > 0:
 		attempt_number = attempt_number + 1
 		try:
 			while query_success == False:
-				num_moves_to_consider = 10
-				if (current_position['move_index'] == 1) & (attacker == "white"):
-					num_moves_to_consider = 5
-				if (current_position['move_index'] == 0) & (attacker == "black"):
-					num_moves_to_consider = 5
+				num_moves_to_consider = 0
+				if attacker == "white":
+					if current_position['move_index'] == 1: # This means the next move if black's first move
+						num_moves_to_consider = num_defending_first_moves_to_consider
+					elif current_position['move_index'] % 2 == 1: # This means the next move is black's non-first move
+						num_moves_to_consider = num_defending_subsequent_moves_to_consider
+					else: # White to move
+						num_moves_to_consider = num_attacking_moves_to_consider
+				if attacker == "black":
+					if (current_position['move_index'] == 0): # This means the next move is white's first move
+						num_moves_to_consider = num_defending_first_moves_to_consider
+					elif current_position['move_index'] % 2 == 0: # This means the next move is white's non-first move
+						num_moves_to_consider = num_defending_subsequent_moves_to_consider
+					else: # Black to move
+						num_moves_to_consider = num_attacking_moves_to_consider
 
 				# curl -G --data-urlencode "play=e2e4,e7e5,g1f3,b8c6,f1c4,f8c5,e1h1,g8f6,d2d4" --data-urlencode "topGames=0" --data-urlencode "recentGames=0" --data-urlencode "moves=12" https://explorer.lichess.ovh/lichess
 
@@ -110,6 +118,10 @@ while len(stack) > 0:
 	n_api_queries = n_api_queries + 1
 	print("Number of API queries: " + str(n_api_queries))
 
+	# Write raw json output to file
+	with open(raw_json_output_filename, "a") as myfile:
+	    myfile.write(str(json_data) + "\n")
+
 	white_win_prob = json_data['white'] / (json_data['white'] + json_data['draws'] + json_data['black'])
 	draw_prob = json_data['draws'] / (json_data['white'] + json_data['draws'] + json_data['black'])
 	black_win_prob = json_data['black'] / (json_data['white'] + json_data['draws'] + json_data['black'])
@@ -118,7 +130,7 @@ while len(stack) > 0:
 	if current_position['move_index'] > 0:
 		current_opening_name = json_data['opening']['eco'] + ": " + json_data['opening']['name']
 
-	# Write line to file for this position, using the potentially updated opening name
+	# Write line to file for this position, using the potentially updated opening name and other stats
 	if current_position['move_index'] > 0:
 		with open(output_filename, "a") as myfile:
 		    myfile.write(
@@ -127,12 +139,12 @@ while len(stack) > 0:
 		    	str(current_position['move_index']) + "\t" +
 		    	str(current_position['prob']) + "\t" +
 		    	str(current_position['prob_trimmed']) + "\t" +
-		    	str(current_position['white_wins']) + "\t" +
-		    	str(current_position['draws']) + "\t" +
-		    	str(current_position['black_wins']) + "\t" +
-		    	str(current_position['white_win_prob']) + "\t" +
-		    	str(current_position['draw_prob']) + "\t" +
-		    	str(current_position['black_win_prob']) + "\n")
+		    	str(json_data['white']) + "\t" +
+		    	str(json_data['draws']) + "\t" +
+		    	str(json_data['black']) + "\t" +
+		    	str(white_win_prob) + "\t" +
+		    	str(draw_prob) + "\t" +
+		    	str(black_win_prob) + "\n")
 
 	# Check next moves to add to stack if conditions are met. Use reverse order to pop the most frequent position first from the stack
 	for next_move in reversed(json_data['moves']):
@@ -179,10 +191,6 @@ while len(stack) > 0:
 		#next_position_opening_name = current_position['opening_name']
 		# Tentatively assign the opening name of the next positions to the opening position of the current position
 		next_position_opening_name = current_opening_name
-
-		if next_position_moves in opening_name_dict:
-			next_position_opening_name = opening_name_dict[next_position_moves]
-
 		
 		next_move_position = {
 			'opening_name': next_position_opening_name, 
