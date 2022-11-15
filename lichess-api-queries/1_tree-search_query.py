@@ -76,8 +76,10 @@ while len(stack) > 0:
 		continue
 	
 	result = ""
-	attempt_number = 1
+	attempt_number = 0
 	query_success = False
+	exception_detected = False
+	json_data = None
 	while (attempt_number < 5) & (query_success == False):
 		attempt_number = attempt_number + 1
 		try:
@@ -110,10 +112,14 @@ while len(stack) > 0:
 			json_data = json.loads(result.stdout)
 		except Exception as e:
 			with open('errors.txt', 'a') as f:
+				exception_detected = True
 				f.write("Caught an error on attempt " + str(attempt_number) + "\n")
 				f.write(str(current_position) + "\n")
 				f.write(str(e))
 				f.write(traceback.format_exc())
+
+	if exception_detected == True:
+		continue
 
 	n_api_queries = n_api_queries + 1
 	print("Number of API queries: " + str(n_api_queries))
