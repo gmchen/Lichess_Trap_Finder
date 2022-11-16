@@ -5,16 +5,28 @@ library(chess)
 library(ggrepel)
 
 data_import <- read.csv("~/Box/repos/Lichess_Trap_Finder/lichess-api-queries/data_from_queries/position_data_white_attacking.txt", sep="\t")
+data_import <- read.csv("~/Box/repos/Lichess_Trap_Finder/lichess-api-queries/data_from_queries/position_data_black_attacking.txt", sep="\t")
 data_import <- read.csv("~/Box/repos/Lichess_Trap_Finder/lichess-api-queries/data_from_queries/position_data_white_attacking_merged.txt", sep="\t")
 data_import <- read.csv("~/Box/repos/Lichess_Trap_Finder/lichess-api-queries/data_from_queries/old_position_data_white_attacking.txt", sep="\t")
 data_import <- read.csv("~/Box/repos/Lichess_Trap_Finder/lichess-api-queries/data_from_queries/run_to_above_32000_position_data_white_attacking.txt", sep="\t")
 data_import <- read.csv("~/Box/repos/Lichess_Trap_Finder/Analysis/processed_data/filtered_data_san_fen_cluster.tsv", sep="\t")
+data_import <- read.csv("~/Box/repos/Lichess_Trap_Finder/Analysis/processed_data/black_filtered_data_san_fen_cluster.tsv", sep="\t")
+cluster_representatives_without_analysis <- read.csv("~/Box/repos/Lichess_Trap_Finder/Analysis/processed_data/white_cluster_representatives_without_analysis.tsv", sep="\t")
+cluster_representatives_with_analysis <- read.csv("~/Box/repos/Lichess_Trap_Finder/Analysis/processed_data/white_cluster_representatives_with_analysis.tsv", sep="\t")
 
 filtered_data <- data_import
 
+# For white
 filtered_data <- data_import[data_import$prob_trimmed > 0.1 & data_import$prob > 0.01 & data_import$white_win_prob > 0.55 & data_import$white_wins + data_import$draws + data_import$black_wins > 500,]
 
+# For black
+filtered_data <- data_import[data_import$prob_trimmed > 0.1 & data_import$prob > 0.01 & data_import$black_win_prob > 0.55 & data_import$white_wins + data_import$draws + data_import$black_wins > 500,]
+
+# For white
 filtered_data <- filtered_data[rev(order(filtered_data$white_win_prob)),]
+
+# For black
+filtered_data <- filtered_data[rev(order(filtered_data$black_win_prob)),]
 #filtered_data <- head(filtered_data, n=1000)
 
 # This step is a little slow
@@ -78,8 +90,6 @@ ggplot(filtered_data_deduplicated, aes(x = prob, y = white_win_prob)) +
   xlab("Probability of opponent making appropriate moves") +
   ylab("White win probability")
 
-View(filtere
-
 geoView(filtered_data_deduplicated[filtered_data_deduplicated$prob > 0.05,])
 
 shortlist <- filtered_data_deduplicated[filtered_data_deduplicated$prob > 0.05,]
@@ -97,3 +107,12 @@ filtered_data$cluster <- paste0("C", as.numeric(fct_inorder(filtered_data$cluste
 
 filtered_data$cluster <- paste0("C", as.numeric(fct_inorder(filtered_data$cluster)))
 
+# Some cleanup that was done for the first run because of an initial bug in the stockfish eval that needed to be rerun.
+# cluster_representatives_without_analysis contained a stockfish rerun, and had an additional cluster step for Bxd8. 
+cluster_representatives_without_analysis[which(cluster_representatives_without_analysis$san %in% setdiff(cluster_representatives_without_analysis$san, cluster_representatives_with_analysis$san)),]$cluster_idx <- 2
+cluster_representatives_without_analysis <- cluster_representatives_without_analysis[!duplicated(cluster_representatives_without_analysis$cluster_idx),]
+cluster_representatives_without_analysis$cluster_idx <- 1:nrow(cluster_representatives_without_analysis)
+out <- merge(cluster_representatives_without_analysis, cluster_representatives_with_analysis[,c("san", "analysis_url")], by="san", all.x = TRUE)
+out <- out[,colnames(cluster_representatives_with_analysis)]
+out[out$move_index %% 2 == 1,]$stockfish_eval <- - out[out$move_index %% 2 == 1,]$stockfish_eval
+write.table(out, file="~/Box/repos/Lichess_Trap_Finder/Analysis/processed_data/white_cluster_representatives_with_analysis.tsv", sep="\t", row.names = FALSE, quote=FALSE)
