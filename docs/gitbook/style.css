@@ -2587,7 +2587,7 @@ table{
 }
 @media (min-width:600px){
     .book.with-summary .book-body{
-        left:300px
+        left:250px
     }
 }
 @media (max-width:600px){
