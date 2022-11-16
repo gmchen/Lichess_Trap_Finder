@@ -4,7 +4,7 @@ import time
 import csv
 import traceback
 
-attacker = "white"
+attacker = "black"
 prob_cutoff = 0.01
 trimmed_prob_cutoff = 0.10
 attacker_win_prob_cutoff = 0.45
