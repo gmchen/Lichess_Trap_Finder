@@ -18,12 +18,12 @@ require(['gitbook', 'jquery'], function(gitbook, $) {
             config: 'sepia',
             text: 'Sepia',
             id: 1
-        },
-        {
-            config: 'night',
-            text: 'Night',
-            id: 2
-        }
+        }//,
+        //{
+        //    config: 'night',
+        //    text: 'Night',
+        //    id: 2
+        //}
     ];
 
     // Default font families
