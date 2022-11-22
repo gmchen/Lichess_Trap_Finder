@@ -193,8 +193,6 @@ while len(stack) > 0:
 		else:
 			next_position_moves = current_position['moves'] + "," + next_move['uci']
 
-		# Update the opening name based on the separately downloaded ECO database
-		#next_position_opening_name = current_position['opening_name']
 		# Tentatively assign the opening name of the next positions to the opening position of the current position
 		next_position_opening_name = current_opening_name
 		
