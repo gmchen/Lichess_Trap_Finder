@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2022-11-16T17:06:54.571465</dc:date>
+    <dc:date>2022-11-22T14:46:53.604171</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -25,8 +25,9 @@
 L 293.4 66.625938 
 L 293.4 0 
 L 0 0 
+L 0 66.625938 
 z
-" style="fill: #ffffff"/>
+" style="fill: none"/>
   </g>
   <g id="axes_1">
    <g id="patch_2">
@@ -35,7 +36,7 @@ L 160.703227 44.191875
 L 160.703227 23.401875 
 L 7.2 23.401875 
 z
-" clip-path="url(#p1a9d974904)" style="fill: #ffffff; stroke: #000000; stroke-linejoin: miter"/>
+" clip-path="url(#p00a8cfa396)" style="fill: #ffffff; stroke: #000000; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 160.703227 44.191875 
@@ -43,7 +44,7 @@ L 171.033153 44.191875
 L 171.033153 23.401875 
 L 160.703227 23.401875 
 z
-" clip-path="url(#p1a9d974904)" style="fill: #808080; stroke: #000000; stroke-linejoin: miter"/>
+" clip-path="url(#p00a8cfa396)" style="fill: #808080; stroke: #000000; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 171.033153 44.191875 
@@ -51,7 +52,7 @@ L 286.2 44.191875
 L 286.2 23.401875 
 L 171.033153 23.401875 
 z
-" clip-path="url(#p1a9d974904)" style="stroke: #000000; stroke-linejoin: miter"/>
+" clip-path="url(#p00a8cfa396)" style="stroke: #000000; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
     <!-- Win Proportions, Lichess Games -->
@@ -851,7 +852,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p1a9d974904">
+  <clipPath id="p00a8cfa396">
    <rect x="7.2" y="13.006875" width="279" height="41.58"/>
   </clipPath>
  </defs>
