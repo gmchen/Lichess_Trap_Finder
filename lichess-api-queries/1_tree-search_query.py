@@ -5,13 +5,23 @@ import csv
 import traceback
 
 attacker = "black"
-prob_cutoff = 0.01
-trimmed_prob_cutoff = 0.10
-attacker_win_prob_cutoff = 0.45
-num_attacking_moves_to_consider = 10
-num_defending_first_moves_to_consider = 5
-num_defending_subsequent_moves_to_consider = 2
-min_num_games = 500
+if attacker == "white":
+	prob_cutoff = 0.01
+	trimmed_prob_cutoff = 0.10
+	attacker_win_prob_cutoff = 0.45
+	num_attacking_moves_to_consider = 10
+	num_defending_first_moves_to_consider = 5
+	num_defending_subsequent_moves_to_consider = 2
+	min_num_games = 500
+if attacker == "black":
+	prob_cutoff = 0.01
+	trimmed_prob_cutoff = 0.10
+	attacker_win_prob_cutoff = 0.41
+	num_attacking_moves_to_consider = 10
+	num_defending_first_moves_to_consider = 5
+	num_defending_subsequent_moves_to_consider = 5
+	min_num_games = 500
+
 raw_json_output_filename = ""
 output_filename = ""
 
